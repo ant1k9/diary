@@ -1,8 +1,9 @@
 use diary::config::*;
+use diary::db::*;
 use diary::errors::BoxedErrorResult;
 
 use dirs;
-use std::{env, fs, path};
+use std::{env, fs, io, path};
 use structopt::StructOpt;
 
 const DEFAULT_CONFIG: &str = ".config/diary/config.yaml";
@@ -11,14 +12,14 @@ const DEFAULT_CONFIG: &str = ".config/diary/config.yaml";
 pub struct Add {
     #[structopt(short, long)]
     date: Option<String>,
-    actitbity: String,
+    activity: String,
 }
 
 #[derive(Debug, StructOpt)]
 pub struct Edit {
     #[structopt(short, long)]
     date: Option<String>,
-    actitbity: String,
+    activity: String,
 }
 
 #[derive(Debug, StructOpt)]
@@ -40,6 +41,29 @@ enum Command {
     Show(Show),
 }
 
+fn add_diary_record(config: &Config, activity: &str, date: Option<String>) -> BoxedErrorResult<()> {
+    for i in 0..config.len() {
+        if config[i].name != activity {
+            continue;
+        }
+        ensure_table_is_ready(&config[i])?;
+        let answers = config[i]
+            .fields
+            .iter()
+            .map(|f| {
+                println!("{}", f.title);
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).unwrap();
+                input.to_owned()
+            })
+            .collect::<Vec<_>>();
+        return save_diary_record(&config[i], answers);
+    }
+
+    println!("no such activity {}", activity);
+    Ok(())
+}
+
 fn main() -> BoxedErrorResult<()> {
     let default_path = dirs::home_dir()
         .unwrap()
@@ -51,7 +75,7 @@ fn main() -> BoxedErrorResult<()> {
 
     let opt = Command::from_args();
     match opt {
-        Command::Add(_) => (),
+        Command::Add(add) => add_diary_record(&config, &add.activity, add.date)?,
         Command::Edit(_) => (),
         Command::Show(_) => (),
     }

@@ -1,10 +1,8 @@
 - name: sleeping hours
   fields:
     - name: hours
-      type: integer
       title: How many hours have I slept today?
-    - name: feeling_good
-      type: integer
+    - name: feeling good
       title: How am I feeling well (from 1 to 10)?
   notifications:
     - at: "12:00"

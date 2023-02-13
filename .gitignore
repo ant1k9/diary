@@ -16,3 +16,4 @@ Cargo.lock
 *.pdb
 
 config.yaml
+*.sqlite3

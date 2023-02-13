@@ -1,18 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 pub type Config = Vec<Activity>;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum FieldType {
-    #[serde(rename = "integer")]
-    Integer,
-    #[serde(rename = "float")]
-    Float,
-    #[serde(rename = "string")]
-    String,
-    #[serde(rename = "bool")]
-    Boolean,
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum NotificationType {
@@ -22,6 +11,7 @@ pub enum NotificationType {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Activity {
+    pub name: String,
     pub fields: Vec<Field>,
     #[serde(default)]
     pub notifications: Vec<Notification>,
@@ -30,8 +20,6 @@ pub struct Activity {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Field {
     pub name: String,
-    #[serde(alias = "type")]
-    pub field_type: FieldType,
     pub title: String,
 }
 
