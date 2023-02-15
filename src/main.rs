@@ -3,7 +3,7 @@ use diary::date::*;
 use diary::db::*;
 use diary::errors::*;
 
-use prettytable::{Cell, Row, Table};
+use prettytable::{Cell, Row, Table, format};
 use std::{env, fs, io, path};
 use structopt::StructOpt;
 
@@ -101,12 +101,13 @@ fn show_diary_record(
             .for_each(|f| header.push(Cell::new(&f.name)));
 
         let mut table = Table::new();
-        table.add_row(Row::new(header));
+        table.set_titles(Row::new(header));
         diary_records.iter().for_each(|record| {
             table.add_row(Row::new(
                 record.iter().map(|f| Cell::new(f)).collect::<Vec<_>>(),
             ));
         });
+        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
         table.printstd();
     }
 
