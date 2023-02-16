@@ -25,7 +25,7 @@ complete -c diary \
     -d "show saved records for activity"
 
 complete -f -c diary \
-    -n "__fish_seen_subcommand_from $_diary_commands" \
+    -n "__fish_seen_subcommand_from $_diary_commands; and not __fish_seen_subcommand_from (_diary_activities)" \
     -a "(_diary_activities)"
 
 complete -f -c diary \

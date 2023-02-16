@@ -3,11 +3,13 @@ use diary::date::*;
 use diary::db::*;
 use diary::errors::*;
 
-use prettytable::{Cell, Row, Table, format};
+use prettytable::{format, Cell, Row, Table};
+use std::path::Path;
 use std::{env, fs, io, path};
 use structopt::StructOpt;
 
 const DEFAULT_CONFIG: &str = ".config/diary/config.yaml";
+const DEFAULT_DB_PATH: &str = ".local/share/diary/diary.sqlite3";
 
 #[derive(Debug, StructOpt)]
 pub struct Add {
@@ -44,11 +46,16 @@ enum Command {
     Show(Show),
 }
 
-fn add_diary_record(config: &Config, activity: &str, date: Option<String>) -> BoxedErrorResult<()> {
+fn add_diary_record(
+    db_path: &Path,
+    config: &Config,
+    activity: &str,
+    date: Option<String>,
+) -> BoxedErrorResult<()> {
     check_date_format(&date)?;
 
     if let Some(activity_config) = config.iter().find(|record| record.name == activity) {
-        ensure_table_is_ready(activity_config)?;
+        ensure_table_is_ready(db_path, activity_config)?;
         let answers = activity_config
             .fields
             .iter()
@@ -59,18 +66,24 @@ fn add_diary_record(config: &Config, activity: &str, date: Option<String>) -> Bo
                 input.to_owned()
             })
             .collect::<Vec<_>>();
-        return save_diary_record(activity_config, answers, date);
+        return save_diary_record(db_path, activity_config, answers, date);
     }
 
     println!("no such activity {}", activity);
     Ok(())
 }
 
-fn edit_diary_record(config: &Config, activity: &str, date: String) -> BoxedErrorResult<()> {
-    add_diary_record(config, activity, Some(date))
+fn edit_diary_record(
+    db_path: &Path,
+    config: &Config,
+    activity: &str,
+    date: String,
+) -> BoxedErrorResult<()> {
+    add_diary_record(db_path, config, activity, Some(date))
 }
 
 fn show_diary_record(
+    db_path: &Path,
     config: &Config,
     activity: &str,
     first: Option<u32>,
@@ -83,14 +96,18 @@ fn show_diary_record(
     check_date_format(&date)?;
 
     if let Some(activity_config) = config.iter().find(|record| record.name == activity) {
-        ensure_table_is_ready(activity_config)?;
+        ensure_table_is_ready(db_path, activity_config)?;
         let diary_records: Vec<Vec<String>> = match first {
-            Some(value) => get_diary_records(activity_config, value, Sorting::ASC, date).unwrap(),
+            Some(value) => {
+                get_diary_records(db_path, activity_config, value, Sorting::ASC, date).unwrap()
+            }
             None => match last {
                 Some(value) => {
-                    get_diary_records(activity_config, value, Sorting::DESC, date).unwrap()
+                    get_diary_records(db_path, activity_config, value, Sorting::DESC, date).unwrap()
                 }
-                None => get_diary_records(activity_config, 1, Sorting::DESC, date).unwrap(),
+                None => {
+                    get_diary_records(db_path, activity_config, 1, Sorting::DESC, date).unwrap()
+                }
             },
         };
 
@@ -120,16 +137,26 @@ fn main() -> BoxedErrorResult<()> {
         .join(path::Path::new(DEFAULT_CONFIG));
     let config_path = env::var("DIARY_CONFIG_PATH").map_or(default_path, path::PathBuf::from);
 
+    let default_db_path = dirs::home_dir()
+        .unwrap()
+        .join(path::Path::new(DEFAULT_DB_PATH));
+    let db_path = env::var("DIARY_DB_PATH").map_or(default_db_path, path::PathBuf::from);
+
     let f = fs::File::open(config_path)?;
     let config: Config = serde_yaml::from_reader(f).expect("cannot read backup metadata");
 
     let opt = Command::from_args();
     match opt {
-        Command::Add(add) => add_diary_record(&config, &add.activity, add.date)?,
-        Command::Edit(edit) => edit_diary_record(&config, &edit.activity, edit.date)?,
-        Command::Show(show) => {
-            show_diary_record(&config, &show.activity, show.first, show.last, show.date)?
-        }
+        Command::Add(add) => add_diary_record(&db_path, &config, &add.activity, add.date)?,
+        Command::Edit(edit) => edit_diary_record(&db_path, &config, &edit.activity, edit.date)?,
+        Command::Show(show) => show_diary_record(
+            &db_path,
+            &config,
+            &show.activity,
+            show.first,
+            show.last,
+            show.date,
+        )?,
     }
 
     Ok(())

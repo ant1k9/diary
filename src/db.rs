@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::config::Activity;
 use crate::errors::BoxedErrorResult;
 use regex::Regex;
@@ -21,10 +23,10 @@ impl std::fmt::Display for Sorting {
     }
 }
 
-pub fn ensure_table_is_ready(activity: &Activity) -> BoxedErrorResult<()> {
+pub fn ensure_table_is_ready(db_path: &Path, activity: &Activity) -> BoxedErrorResult<()> {
     let re = Regex::new(r"[^a-zA-Z\d]").expect("cannot compile regexp to normalize name");
     let table_name = normalize_name(&re, &activity.name);
-    let conn = Connection::open("diary.sqlite3")?;
+    let conn = Connection::open(db_path)?;
 
     conn.execute(
         format!(
@@ -54,13 +56,14 @@ pub fn ensure_table_is_ready(activity: &Activity) -> BoxedErrorResult<()> {
 }
 
 pub fn save_diary_record(
+    db_path: &Path,
     activity: &Activity,
     answers: Vec<String>,
     date: Option<String>,
 ) -> BoxedErrorResult<()> {
     let re = Regex::new(r"[^a-zA-Z\d]").expect("cannot compile regexp to normalize name");
     let table_name = normalize_name(&re, &activity.name);
-    let conn = Connection::open("diary.sqlite3")?;
+    let conn = Connection::open(db_path)?;
 
     let mut stmt = format!("INSERT OR REPLACE INTO {} (", table_name);
     let mut values_stmt = "".to_owned();
@@ -88,6 +91,7 @@ pub fn save_diary_record(
 }
 
 pub fn get_diary_records(
+    db_path: &Path,
     activity: &Activity,
     limit: u32,
     sorting: Sorting,
@@ -95,7 +99,7 @@ pub fn get_diary_records(
 ) -> BoxedErrorResult<Vec<Vec<String>>> {
     let re = Regex::new(r"[^a-zA-Z\d]").expect("cannot compile regexp to normalize name");
     let table_name = normalize_name(&re, &activity.name);
-    let conn = Connection::open("diary.sqlite3")?;
+    let conn = Connection::open(db_path)?;
 
     let mut stmt = match sorting {
         Sorting::ASC => conn
