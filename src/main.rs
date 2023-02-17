@@ -106,7 +106,7 @@ fn show_diary_record(
                     get_diary_records(db_path, activity_config, value, Sorting::DESC, date).unwrap()
                 }
                 None => {
-                    get_diary_records(db_path, activity_config, 1, Sorting::DESC, date).unwrap()
+                    get_diary_records(db_path, activity_config, 10, Sorting::DESC, date).unwrap()
                 }
             },
         };
